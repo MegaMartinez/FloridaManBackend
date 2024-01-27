@@ -1,5 +1,5 @@
-import WebSocket from "ws";
-const Server = WebSocket.Server({port : 7071});
+const WebSocket = require("ws");
+const Server = new WebSocket.Server({port : 7071});
 
 const connections = new Map();
 const servers = {}
