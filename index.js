@@ -191,13 +191,13 @@ class gameServer{
 
 process.on('exit', function () {
     const clear = (value, key, map) => {
-        value.ws.send(JSON.stringify({
+        value.socket.send(JSON.stringify({
             "msg":"server shutdown",
             "body":{
                 "code": 503
             }
         }))
-        value.ws.close();
+        value.socket.close();
     }
     connections.forEach(clear);
     console.log("Program Close");
