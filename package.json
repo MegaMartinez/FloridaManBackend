@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js &>> serverLog",
+    "run": "node index.js &>> serverLog",
     "test": "node index.js"
   },
   "author": "",
