@@ -96,7 +96,7 @@ function setname(ID, message){
 function getservers(ID){
     body = []
     for (const key in Object.keys(servers)){
-        body.push([key, servers[key].playerCount]);
+        body.push([key, parseInt(servers[key].playerCount)]);
     }
 
     connections.get(parseInt(ID)).socket.send(JSON.stringify({
