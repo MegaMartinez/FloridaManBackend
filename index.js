@@ -318,7 +318,7 @@ class gameServer{
         this.prepareMatch = () => {
             this.phase = "prepare"
             this.update();
-            if(servers[this.name].playerCount < 1){
+            if(servers[this.name].playerCount < 3){
                 timeouts.set(this.name, setTimeout(this.prepareMatch, 5 * 1000));
             } else {
                 this.update();
