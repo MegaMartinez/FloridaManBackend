@@ -205,7 +205,7 @@ setInterval(function() {
     console.log();
     console.log(servers);
     console.log();
-}, 30 * 1000);
+}, 15 * 1000);
 
 class gameServer{
     constructor(name) {
@@ -318,7 +318,7 @@ class gameServer{
         this.prepareMatch = () => {
             this.phase = "prepare"
             this.update();
-            if(servers[this.name].playerCount < 3){
+            if(servers[this.name].playerCount < 1){
                 timeouts.set(this.name, setTimeout(this.prepareMatch, 5 * 1000));
             } else {
                 this.update();
