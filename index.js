@@ -95,7 +95,7 @@ function setname(ID, message){
 
 function getservers(ID){
     body = []
-    for (const key in Object.keys(servers)){
+    for (const key of Object.keys(servers)){
         body.push([key, parseInt(servers[key].playerCount)]);
     }
 
