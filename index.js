@@ -236,7 +236,7 @@ class gameServer{
                     res.body.voteCount = this.voteCount;
                     res.body.correct = this.correct;
                     res.body.incorrect = this.incorrect;
-                case "headlines":
+                case "headline":
                     res.body.liar = this.liar;
                     res.body.truther = this.truther;
                     break;
@@ -245,6 +245,12 @@ class gameServer{
         }
 
         this.update = () => {
+            for(const player of Object.keys(servers[this.name].players)){
+                if(connections.get(parseInt(player)) == undefined){
+                    leaveServer(parseInt(player), null, true, this.name);
+                }
+            }
+
             for(let i = this.matchArr.length - 1; i >= 0; i--){
                 if(!Object.keys(servers[this.name].players).includes(this.matchArr[i])){
                     this.matchArr.splice(i);
@@ -276,7 +282,7 @@ class gameServer{
                 }
             }
             
-            for(const player in servers[this.name].players){
+            for(const player of Object.keys(servers[this.name].players)){
                 this.getRoundInfo(connections.get(parseInt(player)).socket);
             }
             
@@ -288,11 +294,11 @@ class gameServer{
             }
             if(!Object.keys(servers[this.name].players).includes(this.truther)){
                 this.truther = null;
-                noTruth = null;
+                noTruth = true;
             }
-            if(!noLie && noTruth){
+            if(!noLie && noTruth && this.liar != null){
                 this.matchArr.push(this.liar);
-            } else if(noLie && !noTruth){
+            } else if(noLie && !noTruth && this.truther != null){
                 this.matchArr.push(this.truther);
             }
             if(noLie || noTruth){
@@ -308,6 +314,7 @@ class gameServer{
             if(servers[this.name].playerCount < 3){
                 setTimeout(this.prepareMatch, 5 * 1000);
             } else {
+                this.update();
                 if(this.shuffleCount <= 0 || this.matchArrL.length == 0 || this.matchArrR.length == 0){
                     this.shuffleCount = (servers[this.name].playerCount - (servers[this.name].playerCount % 2)) / 2;
                     this.matchArr = this.matchArr.concat(this.matchArrL);
@@ -344,7 +351,7 @@ class gameServer{
             connections.get(parseInt(this.liar)).socket.send(JSON.stringify({
                 "msg":"assignment",
                 "body":{
-                    "role":2, // Lie
+                    "role":1, // Lie
                     "headline": this.falseIndex,
                     "liar": this.liar,
                     "truther": this.truther
@@ -353,7 +360,7 @@ class gameServer{
             connections.get(parseInt(this.truther)).socket.send(JSON.stringify({
                 "msg":"assignment",
                 "body":{
-                    "role":1, // Truth
+                    "role":0, // Truth
                     "headline": this.truthIndex,
                     "liar": this.liar,
                     "truther": this.truther
@@ -363,7 +370,7 @@ class gameServer{
                 connections.get(parseInt(player)).socket.send(JSON.stringify({
                     "msg":"assignment",
                     "body":{
-                        "role":3, // Audience
+                        "role":2, // Audience
                         "liar": this.liar,
                         "truther": this.truther
                     }
@@ -373,7 +380,7 @@ class gameServer{
                 connections.get(parseInt(player)).socket.send(JSON.stringify({
                     "msg":"assignment",
                     "body":{
-                        "role":3, // Audience
+                        "role":2, // Audience
                         "liar": this.liar,
                         "truther": this.truther
                     }
@@ -383,7 +390,7 @@ class gameServer{
                 connections.get(parseInt(player)).socket.send(JSON.stringify({
                     "msg":"assignment",
                     "body":{
-                        "role":3, // Audience
+                        "role":2, // Audience
                         "liar": this.liar,
                         "truther": this.truther
                     }
@@ -414,6 +421,14 @@ class gameServer{
                         leaveServer(this.liar, null, true, this.name);
                     }
                     this.update();
+                    if(this.liar != null){
+                        this.matchArr.push(this.liar);
+                        this.liar = null;
+                    }
+                    if(this.truther != null){
+                        this.matchArr.push(this.truther);
+                        this.truther = null;
+                    }
                     this.truthSubmission = null;
                     this.falseSubmission = null;
                     this.truthIndex = -1;
@@ -424,7 +439,7 @@ class gameServer{
                     this.prepareMatch();
                 } else {
                     waitTime += 3;
-                    setInterval(awaitAnswers, 3 * 1000);
+                    setTimeout(awaitAnswers, 3 * 1000);
                 }
             }
             awaitAnswers();
@@ -433,7 +448,7 @@ class gameServer{
         this.startVoting = () => {
             this.phase = "vote"
             for(const player of Object.keys(servers[this.name].players)){
-                connections[player].socket.send(JSON.stringify({
+                connections.get(parseInt(player)).socket.send(JSON.stringify({
                     "msg":"start voting",
                     "body": {
                         "t_headline": this.truthIndex,
@@ -458,9 +473,10 @@ class gameServer{
                     this.assignPoints();
                 } else {
                     waitTime += 3;
-                    setInterval(checkVotes, 3 * 1000);
+                    setTimeout(checkVotes, 3 * 1000);
                 }
             }
+            checkVotes();
         }
 
         this.assignPoints = () => {
@@ -531,7 +547,7 @@ class gameServer{
                     }
                 }));
             }
-            setInterval(() => {
+            setTimeout(() => {
                 this.matchArr.push(this.liar);
                 this.matchArr.push(this.truther);
                 this.liar = null;
