@@ -84,8 +84,8 @@ Server.on("connection", ws => {
 });
 
 function setname(ID, message){
-    connections.get(ID).name = message.body.name;
-    connections.get(ID).socket.send(JSON.stringify({
+    connections.get(parseInt(ID)).name = message.body.name;
+    connections.get(parseInt(ID)).socket.send(JSON.stringify({
         "msg": "name accepted",
         "body": {
             "code": 200
@@ -99,7 +99,7 @@ function getservers(ID){
         body.push([key, servers[key].playerCount]);
     }
 
-    connections.get(ID).socket.send(JSON.stringify({
+    connections.get(parseInt(ID)).socket.send(JSON.stringify({
         "msg": "recv servers",
         "body": {
             "servers": body
@@ -110,17 +110,17 @@ function getservers(ID){
 function joinServer(ID, message){
     if(message.body.serverName in servers){
         servers[message.body.serverName].players[ID] = {
-            "name": connections.get(ID).name,
+            "name": connections.get(parseInt(ID)).name,
             "score": 0
         }
         servers[message.body.serverName].playerCount = Object.keys(servers[message.body.serverName].players).length;
-        connections.get(ID).socket.send(JSON.stringify({
+        connections.get(parseInt(ID)).socket.send(JSON.stringify({
             "msg":"server joined",
             "body":servers[message.body.serverName]
         }))
         servers[message.body.serverName].serverObj.update();
     } else {
-        connections.get(ID).socket.send(JSON.stringify({
+        connections.get(parseInt(ID)).socket.send(JSON.stringify({
             "msg":"err",
             "body":{
                 "code":404
@@ -130,12 +130,19 @@ function joinServer(ID, message){
 }
 
 function leaveServer(ID, message, forced=false, name=null){
-    if (!forced) delete servers[message.body.serverName].players[ID];
-    else delete servers[name].players[ID];
-    servers[message.body.serverName].playerCount = Object.keys(servers[message.body.serverName].players).length;
-    servers[message.body.serverName].serverObj.update();
     if (!forced){
-        connections.get(ID).socket.send(JSON.stringify({
+        delete servers[message.body.serverName].players[ID];
+        servers[message.body.serverName].playerCount = Object.keys(servers[message.body.serverName].players).length;
+        servers[message.body.serverName].serverObj.update();
+    }
+    else {
+        delete servers[name].players[ID];
+        servers[name].playerCount = Object.keys(servers[name].players).length;
+        servers[name].serverObj.update();
+    }
+
+    if (!forced){
+        connections.get(parseInt(ID)).socket.send(JSON.stringify({
             "msg":"left server",
             "body": {
                 "code": 200
@@ -146,7 +153,7 @@ function leaveServer(ID, message, forced=false, name=null){
 
 function makeServer(ID, message){
     if(message.body.serverName in servers){
-        connections.get(ID).socket.send(JSON.stringify({
+        connections.get(parseInt(ID)).socket.send(JSON.stringify({
             "msg":"err",
             "body": {
                 "code": 409
@@ -162,7 +169,7 @@ function makeServer(ID, message){
         }
         servers[message.body.serverName].serverObj.update();
     
-        connections.get(ID).socket.send(JSON.stringify({
+        connections.get(parseInt(ID)).socket.send(JSON.stringify({
             "msg":"server created",
             "body": {
                 "serverName": message.body.serverName
@@ -383,7 +390,7 @@ class gameServer{
 
         var waitTime = 0;
         const awaitAnswers = () => {
-            if(update() === "redo"){
+            if(this.update() === "redo"){
                 this.truthSubmission = null;
                 this.falseSubmission = null;
                 this.truthIndex = -1;
@@ -395,8 +402,24 @@ class gameServer{
                 return;
             }
 
-            if((this.truthSubmission != null && this.falseSubmission != null) || waitTime >= 120){
+            if((this.truthSubmission != null && this.falseSubmission != null)){
                 this.startVoting();
+            } else if(waitTime >= 135){
+                if(this.truthSubmission == null){
+                    leaveServer(this.truther, null, true, this.name);
+                }
+                if(this.falseSubmission == null){
+                    leaveServer(this.liar, null, true, this.name);
+                }
+                this.update();
+                this.truthSubmission = null;
+                this.falseSubmission = null;
+                this.truthIndex = -1;
+                this.falseIndex = -1;
+                this.voteCount = 0;
+                this.correct = [];
+                this.incorrect = [];
+                this.prepareMatch();
             } else {
                 waitTime += 3;
                 setInterval(awaitAnswers, 3 * 1000);
@@ -422,7 +445,14 @@ class gameServer{
         var waitTime = 0;
         const checkVotes = () => {
             this.update();
-            if(this.voteCount >= servers[this.name].playerCount - ((this.liar != null) + (this.truther != null)) || waitTime >= 90){
+            if(this.voteCount >= servers[this.name].playerCount - ((this.liar != null) + (this.truther != null))){
+                this.assignPoints();
+            } else if(waitTime >= 90){
+                for(const player in Object.keys(servers[this.name].players)){
+                    if(!this.correct.includes(player) && !this.incorrect.includes(player) && this.liar != player && this.truther != player){
+                        this.incorrect.push(player);
+                    }
+                }
                 this.assignPoints();
             } else {
                 waitTime += 3;
