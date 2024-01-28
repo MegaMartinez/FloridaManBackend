@@ -11,7 +11,7 @@ const servers = {}
 
 Server.on("connection", ws => {
     const connectionTime = new Date();
-    const ID = connectionTime.getMilliseconds();
+    const ID = connectionTime.getTime();
 
     connections.set(ID, {
         "name": "Unnamed",
@@ -160,6 +160,7 @@ function makeServer(ID, message){
             "players": {},
             "mature": true
         }
+        servers[message.body.serverName].serverObj.update();
     
         connections.get(ID).socket.send(JSON.stringify({
             "msg":"server created",
@@ -171,7 +172,7 @@ function makeServer(ID, message){
 }
 
 setInterval(function() {
-    for(const key in Object.keys(servers)){
+    for(const key of Object.keys(servers)){
         if(servers[key].playerCount == 0){
             servers[key].emptyPasses++;
             if(servers[key].emptyPasses >= 4){
@@ -207,7 +208,6 @@ class gameServer{
         this.voteCount = 0;
         this.correct = [];
         this.incorrect = [];
-        this.update();
     }
 
     getRoundInfo(socket) {
@@ -267,11 +267,11 @@ class gameServer{
                 this.matchArr.push(player);
             }
         }
-
+        
         for(const player in servers[this.name].players){
-            this.getRoundInfo(connections.get(player).socket);
+            this.getRoundInfo(connections.get(parseInt(player)).socket);
         }
-
+        
         let noTruth = false;
         let noLie = false;
         if(!Object.keys(servers[this.name].players).includes(this.liar)){
@@ -284,7 +284,7 @@ class gameServer{
         }
         if(!noLie && noTruth){
             this.matchArr.push(this.liar);
-        } else if(nolie && !noTruth){
+        } else if(noLie && !noTruth){
             this.matchArr.push(this.truther);
         }
         if(noLie || noTruth){
@@ -332,7 +332,7 @@ class gameServer{
             this.truthIndex = Math.floor(Math.random() * headlines.true.nomature.length);
             this.falseIndex = Math.floor(Math.random() * headlines.false.nomature.length);
         }
-        connections.get(this.liar).socket.send(JSON.stringify({
+        connections.get(parseInt(this.liar)).socket.send(JSON.stringify({
             "msg":"assignment",
             "body":{
                 "role":2, // Lie
@@ -341,7 +341,7 @@ class gameServer{
                 "truther": this.truther
             }
         }));
-        connections.get(this.truther).socket.send(JSON.stringify({
+        connections.get(parseInt(this.truther)).socket.send(JSON.stringify({
             "msg":"assignment",
             "body":{
                 "role":1, // Truth
@@ -351,7 +351,7 @@ class gameServer{
             }
         }));
         for(const player in this.matchArrL){
-            connections.get(player).socket.send(JSON.stringify({
+            connections.get(parseInt(player)).socket.send(JSON.stringify({
                 "msg":"assignment",
                 "body":{
                     "role":3, // Audience
@@ -361,7 +361,7 @@ class gameServer{
             }));
         }
         for(const player in this.matchArrR){
-            connections.get(player).socket.send(JSON.stringify({
+            connections.get(parseInt(player)).socket.send(JSON.stringify({
                 "msg":"assignment",
                 "body":{
                     "role":3, // Audience
@@ -371,7 +371,7 @@ class gameServer{
             }));
         }
         for(const player in this.matchArr){
-            connections.get(player).socket.send(JSON.stringify({
+            connections.get(parseInt(player)).socket.send(JSON.stringify({
                 "msg":"assignment",
                 "body":{
                     "role":3, // Audience
@@ -438,7 +438,7 @@ class gameServer{
         for(const player in this.correct){
             truthPoints++;
             servers[this.name].players[player].score++;
-            connections.get(player).socket.send(JSON.stringify({
+            connections.get(parseInt(player)).socket.send(JSON.stringify({
                 "msg": "points",
                 "body": {
                     "result": 1
@@ -447,7 +447,7 @@ class gameServer{
         }
         for(const player in this.incorrect){
             falsePoints++;
-            connections.get(player).socket.send(JSON.stringify({
+            connections.get(parseInt(player)).socket.send(JSON.stringify({
                 "msg": "points",
                 "body": {
                     "result": 0
@@ -458,13 +458,13 @@ class gameServer{
         if(truthPoints == falsePoints){
             servers[this.name].players[this.liar].score++;
             servers[this.name].players[this.truther].score++;
-            connections.get(this.liar).socket.send(JSON.stringify({
+            connections.get(parseInt(this.liar)).socket.send(JSON.stringify({
                 "msg":"points",
                 "body": {
                     "result": 2
                 }
             }));
-            connections.get(this.truther).socket.send(JSON.stringify({
+            connections.get(parseInt(this.truther)).socket.send(JSON.stringify({
                 "msg":"points",
                 "body": {
                     "result": 2
@@ -472,13 +472,13 @@ class gameServer{
             }));
         } else if(truthPoints < falsePoints){
             servers[this.name].players[this.liar].score++;
-            connections.get(this.liar).socket.send(JSON.stringify({
+            connections.get(parseInt(this.liar)).socket.send(JSON.stringify({
                 "msg":"points",
                 "body": {
                     "result": 1
                 }
             }));
-            connections.get(this.truther).socket.send(JSON.stringify({
+            connections.get(parseInt(this.truther)).socket.send(JSON.stringify({
                 "msg":"points",
                 "body": {
                     "result": 0
@@ -486,13 +486,13 @@ class gameServer{
             }));
         } else if(truthPoints > falsePoints){
             servers[this.name].players[this.truther].score++;
-            connections.get(this.liar).socket.send(JSON.stringify({
+            connections.get(parseInt(this.liar)).socket.send(JSON.stringify({
                 "msg":"points",
                 "body": {
                     "result": 0
                 }
             }));
-            connections.get(this.truther).socket.send(JSON.stringify({
+            connections.get(parseInt(this.truther)).socket.send(JSON.stringify({
                 "msg":"points",
                 "body": {
                     "result": 1
