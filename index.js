@@ -52,7 +52,8 @@ Server.on("connection", ws => {
                 ws.send(JSON.stringify({
                     "msg":"err",
                     "body":{
-                        "code": 400
+                        "code": 400,
+                        "ID": ID.toString()
                     }
                 }))
                 break;
@@ -89,7 +90,8 @@ function setname(ID, message){
     connections.get(parseInt(ID)).socket.send(JSON.stringify({
         "msg": "name accepted",
         "body": {
-            "code": 200
+            "code": 200,
+            "ID": ID.toString()
         }
     }));
 }
@@ -124,7 +126,8 @@ function joinServer(ID, message){
         connections.get(parseInt(ID)).socket.send(JSON.stringify({
             "msg":"err",
             "body":{
-                "code":404
+                "code":404,
+                "ID": ID.toString()
             }
         }))
     }
@@ -146,7 +149,8 @@ function leaveServer(ID, message, forced=false, name=null){
         connections.get(parseInt(ID)).socket.send(JSON.stringify({
             "msg":"left server",
             "body": {
-                "code": 200
+                "code": 200,
+                "ID": ID.toString()
             }
         }))
     }
@@ -157,7 +161,8 @@ function makeServer(ID, message){
         connections.get(parseInt(ID)).socket.send(JSON.stringify({
             "msg":"err",
             "body": {
-                "code": 409
+                "code": 409,
+                "ID": ID.toString()
             }
         }))
     } else {
@@ -269,16 +274,12 @@ class gameServer{
                 }
             }
             for(let i = this.correct.length - 1; i >= 0; i--){
-                console.log(`correct check ${this.correct[i]}`);
                 if(!Object.keys(servers[this.name].players).includes(this.correct[i])){
-                    console.log(`correct delete ${this.correct[i]}`);
                     this.correct.splice(i);
                 }
             }
             for(let i = this.incorrect.length - 1; i >= 0; i--){
-                console.log(`incorrect check ${this.incorrect[i]}`);
                 if(!Object.keys(servers[this.name].players).includes(this.incorrect[i])){
-                    console.log(`incorrect delete ${this.incorrect[i]}`);
                     this.incorrect.splice(i);
                 }
             }
@@ -486,12 +487,10 @@ class gameServer{
         }
 
         this.assignPoints = () => {
-            console.log(this.correct, this.incorrect);
             this.phase = "points"
             let falsePoints = 0;
             let truthPoints = 0;
             for(const player of this.correct){
-                console.log(player);
                 truthPoints++;
                 servers[this.name].players[player].score++;
                 connections.get(parseInt(player)).socket.send(JSON.stringify({
@@ -502,7 +501,6 @@ class gameServer{
                 }));
             }
             for(const player of this.incorrect){
-                console.log(player);
                 falsePoints++;
                 connections.get(parseInt(player)).socket.send(JSON.stringify({
                     "msg": "points",
@@ -605,7 +603,8 @@ process.on('exit', function () {
         value.socket.send(JSON.stringify({
             "msg":"server shutdown",
             "body":{
-                "code": 503
+                "code": 503,
+                "ID": key.toString()
             }
         }))
         value.socket.close();
