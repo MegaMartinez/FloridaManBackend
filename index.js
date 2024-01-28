@@ -61,7 +61,7 @@ Server.on("connection", ws => {
     ws.on("error", err => {
         console.error(err);
         console.log();
-        for(const key in Object.keys(servers)){
+        for(const key of Object.keys(servers)){
             if(ID in Object.keys(servers[key].players)){
                 leaveServer(ID, null, true, key)
             }
@@ -72,7 +72,7 @@ Server.on("connection", ws => {
     });
 
     ws.on("close", () => {
-        for(const key in Object.keys(servers)){
+        for(const key of Object.keys(servers)){
             if(ID in Object.keys(servers[key].players)){
                 leaveServer(ID, null, true, key)
             }
@@ -96,7 +96,7 @@ function setname(ID, message){
 function getservers(ID){
     body = []
     for (const key of Object.keys(servers)){
-        body.push([key, parseInt(servers[key].playerCount)]);
+        body.push([key, (servers[key].playerCount).toString()]);
     }
 
     connections.get(parseInt(ID)).socket.send(JSON.stringify({
@@ -168,6 +168,7 @@ function makeServer(ID, message){
             "mature": true
         }
         servers[message.body.serverName].serverObj.update();
+        servers[message.body.serverName].serverObj.prepareMatch();
     
         connections.get(parseInt(ID)).socket.send(JSON.stringify({
             "msg":"server created",
@@ -269,7 +270,7 @@ class gameServer{
                 this.incorrect.splice(i);
             }
         }
-        for(const player in Object.keys(servers[this.name].players)){
+        for(const player of Object.keys(servers[this.name].players)){
             if(!this.matchArrL.includes(player) && !this.matchArrR.includes(player) && !this.matchArr.includes(player)){
                 this.matchArr.push(player);
             }
@@ -357,7 +358,7 @@ class gameServer{
                 "truther": this.truther
             }
         }));
-        for(const player in this.matchArrL){
+        for(const player of this.matchArrL){
             connections.get(parseInt(player)).socket.send(JSON.stringify({
                 "msg":"assignment",
                 "body":{
@@ -367,7 +368,7 @@ class gameServer{
                 }
             }));
         }
-        for(const player in this.matchArrR){
+        for(const player of this.matchArrR){
             connections.get(parseInt(player)).socket.send(JSON.stringify({
                 "msg":"assignment",
                 "body":{
@@ -377,7 +378,7 @@ class gameServer{
                 }
             }));
         }
-        for(const player in this.matchArr){
+        for(const player of this.matchArr){
             connections.get(parseInt(player)).socket.send(JSON.stringify({
                 "msg":"assignment",
                 "body":{
@@ -430,7 +431,7 @@ class gameServer{
 
     startVoting() {
         this.phase = "vote"
-        for(const player in Object.keys(servers[this.name].players)){
+        for(const player of Object.keys(servers[this.name].players)){
             connections[player].socket.send(JSON.stringify({
                 "msg":"start voting",
                 "body": {
@@ -448,7 +449,7 @@ class gameServer{
             if(this.voteCount >= servers[this.name].playerCount - ((this.liar != null) + (this.truther != null))){
                 this.assignPoints();
             } else if(waitTime >= 90){
-                for(const player in Object.keys(servers[this.name].players)){
+                for(const player of Object.keys(servers[this.name].players)){
                     if(!this.correct.includes(player) && !this.incorrect.includes(player) && this.liar != player && this.truther != player){
                         this.incorrect.push(player);
                     }
@@ -465,7 +466,7 @@ class gameServer{
         this.phase = "points"
         let falsePoints = 0;
         let truthPoints = 0;
-        for(const player in this.correct){
+        for(const player of this.correct){
             truthPoints++;
             servers[this.name].players[player].score++;
             connections.get(parseInt(player)).socket.send(JSON.stringify({
@@ -475,7 +476,7 @@ class gameServer{
                 }
             }));
         }
-        for(const player in this.incorrect){
+        for(const player of this.incorrect){
             falsePoints++;
             connections.get(parseInt(player)).socket.send(JSON.stringify({
                 "msg": "points",
