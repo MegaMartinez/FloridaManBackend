@@ -7,6 +7,7 @@ const WebSocket = require("ws");
 const Server = new WebSocket.Server({port : 7071});
 
 const connections = new Map();
+const timeouts = new Map();
 const servers = {}
 
 Server.on("connection", ws => {
@@ -184,6 +185,8 @@ setInterval(function() {
         if(servers[key].playerCount == 0){
             servers[key].emptyPasses++;
             if(servers[key].emptyPasses >= 4){
+                clearTimeout(timeouts.get(key))
+                timeouts.delete(key);
                 delete servers[key];
             }
         } else {
@@ -217,7 +220,6 @@ class gameServer{
         this.correct = [];
         this.incorrect = [];
         
-
         this.getRoundInfo = (socket) => {
             let res = {
                 "msg":"round info",
@@ -267,12 +269,16 @@ class gameServer{
                 }
             }
             for(let i = this.correct.length - 1; i >= 0; i--){
+                console.log(`correct check ${this.correct[i]}`);
                 if(!Object.keys(servers[this.name].players).includes(this.correct[i])){
+                    console.log(`correct delete ${this.correct[i]}`);
                     this.correct.splice(i);
                 }
             }
             for(let i = this.incorrect.length - 1; i >= 0; i--){
+                console.log(`incorrect check ${this.incorrect[i]}`);
                 if(!Object.keys(servers[this.name].players).includes(this.incorrect[i])){
+                    console.log(`incorrect delete ${this.incorrect[i]}`);
                     this.incorrect.splice(i);
                 }
             }
@@ -312,7 +318,7 @@ class gameServer{
             this.phase = "prepare"
             this.update();
             if(servers[this.name].playerCount < 3){
-                setTimeout(this.prepareMatch, 5 * 1000);
+                timeouts.set(this.name, setTimeout(this.prepareMatch, 5 * 1000));
             } else {
                 this.update();
                 if(this.shuffleCount <= 0 || this.matchArrL.length == 0 || this.matchArrR.length == 0){
@@ -439,7 +445,7 @@ class gameServer{
                     this.prepareMatch();
                 } else {
                     waitTime += 3;
-                    setTimeout(awaitAnswers, 3 * 1000);
+                    timeouts.set(this.name, setTimeout(awaitAnswers, 3 * 1000));
                 }
             }
             awaitAnswers();
@@ -473,17 +479,19 @@ class gameServer{
                     this.assignPoints();
                 } else {
                     waitTime += 3;
-                    setTimeout(checkVotes, 3 * 1000);
+                    timeouts.set(this.name, setTimeout(checkVotes, 3 * 1000));
                 }
             }
             checkVotes();
         }
 
         this.assignPoints = () => {
+            console.log(this.correct, this.incorrect);
             this.phase = "points"
             let falsePoints = 0;
             let truthPoints = 0;
             for(const player of this.correct){
+                console.log(player);
                 truthPoints++;
                 servers[this.name].players[player].score++;
                 connections.get(parseInt(player)).socket.send(JSON.stringify({
@@ -494,6 +502,7 @@ class gameServer{
                 }));
             }
             for(const player of this.incorrect){
+                console.log(player);
                 falsePoints++;
                 connections.get(parseInt(player)).socket.send(JSON.stringify({
                     "msg": "points",
@@ -547,7 +556,7 @@ class gameServer{
                     }
                 }));
             }
-            setTimeout(() => {
+            timeouts.set(this.name, setTimeout(() => {
                 this.matchArr.push(this.liar);
                 this.matchArr.push(this.truther);
                 this.liar = null;
@@ -560,7 +569,7 @@ class gameServer{
                 this.correct = [];
                 this.incorrect = [];
                 this.prepareMatch();
-            }, 5 * 1000);
+            }, 5 * 1000));
         }
 
         this.giveTrueSubmission = (message) => {
@@ -571,9 +580,9 @@ class gameServer{
         }
         this.giveVote = (ID, message) => {
             if(message.body.vote == 1){
-                this.correct.push(ID);
+                this.correct.push(ID.toString());
             } else {
-                this.incorrect.push(ID);
+                this.incorrect.push(ID.toString());
             }
             this.voteCount++;
         }
